@@ -393,6 +393,11 @@ build {
       "sudo touch /var/db/enclave/runtime-seal-required",
       "sudo chown root:wheel /var/db/enclave/runtime-seal-required",
       "sudo chmod 0600 /var/db/enclave/runtime-seal-required",
+      // The vanilla builder enables stock SSH only so Packer can provision
+      // the image. Persistently disable it before acceptance. Do not bootout
+      // the currently loaded job: that would sever this final provisioner,
+      // while the disabled override still prevents SSH on the next boot.
+      "sudo launchctl disable system/com.openssh.sshd",
       "chmod 0755 /tmp/enclave-image-acceptance.sh",
       "/tmp/enclave-image-acceptance.sh",
       "rm /tmp/enclave-image-acceptance.sh",
