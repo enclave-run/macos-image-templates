@@ -22,6 +22,9 @@ test -f /Library/LaunchAgents/com.enclave.sbxd-darwin.plist
 test -f /Library/LaunchDaemons/com.enclave.guest-bootstrap.plist
 test -f /var/db/enclave/runtime-seal-required
 test -d /Users/admin/Library/Logs/Enclave
+test "$(sudo defaults read /Library/Preferences/com.apple.loginwindow autoLoginUser)" = admin
+test "$(stat -f '%Su:%Sg:%Lp' /etc/kcpassword)" = root:wheel:600
+test -s /etc/kcpassword
 
 for database in \
   "/Library/Application Support/com.apple.TCC/TCC.db" \

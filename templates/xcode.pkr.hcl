@@ -119,6 +119,26 @@ locals {
 build {
   sources = ["source.tart-cli.tart"]
 
+  provisioner "file" {
+    source      = "scripts/write-kcpassword.py"
+    destination = "/tmp/write-kcpassword.py"
+  }
+
+  provisioner "shell" {
+    inline = [
+      // Tahoe's sysadminctl can report SACSetAutoLoginPassword error 22 for
+      // this unattended account. Generate the documented kcpassword format
+      // ourselves after Command Line Tools are present, then validate it.
+      "printf '%s' '${var.builder_password}' | sudo /usr/bin/python3 /tmp/write-kcpassword.py",
+      "sudo defaults write /Library/Preferences/com.apple.loginwindow autoLoginUser admin",
+      "sudo chown root:wheel /etc/kcpassword",
+      "sudo chmod 0600 /etc/kcpassword",
+      "rm /tmp/write-kcpassword.py",
+      "test \"$(sudo defaults read /Library/Preferences/com.apple.loginwindow autoLoginUser)\" = admin",
+      "test \"$(stat -f '%Su:%Sg:%Lp' /etc/kcpassword)\" = root:wheel:600",
+    ]
+  }
+
   provisioner "shell" {
     inline = [
       "source ~/.zprofile",
