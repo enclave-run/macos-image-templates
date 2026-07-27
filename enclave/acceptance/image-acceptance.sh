@@ -23,10 +23,10 @@ test -x /usr/local/libexec/enclave/enclave-guest-bootstrap
 test -f /Library/LaunchAgents/com.enclave.sbxd-darwin.plist
 test -f /usr/local/libexec/enclave/com.enclave.guest-bootstrap.plist
 test ! -e /Library/LaunchDaemons/com.enclave.guest-bootstrap.plist
-test -f /var/db/enclave/runtime-seal-required
-test -f /var/db/enclave/image-build-in-progress
+sudo test -f /var/db/enclave/runtime-seal-required
+sudo test -f /var/db/enclave/image-build-in-progress
 test "$(/usr/sbin/sysctl -n kern.bootsessionuuid)" = \
-  "$(tr -d '[:space:]' < /var/db/enclave/image-build-in-progress)"
+  "$(sudo cat /var/db/enclave/image-build-in-progress | tr -d '[:space:]')"
 test -d /Users/admin/Library/Logs/Enclave
 test "$(sudo defaults read /Library/Preferences/com.apple.loginwindow autoLoginUser)" = admin
 test "$(stat -f '%Su:%Sg:%Lp' /etc/kcpassword)" = root:wheel:600

@@ -78,6 +78,7 @@ build {
 
   provisioner "shell" {
     inline = [
+      "set -x",
       "test \"$(shasum -a 256 /usr/local/libexec/enclave/sbxd-darwin | awk '{print $1}')\" = '${var.sbxd_darwin_sha256}'",
       "test \"$(shasum -a 256 /usr/local/libexec/enclave/enclave-guest-bootstrap | awk '{print $1}')\" = '${var.guest_bootstrap_sha256}'",
       "test -f /usr/local/libexec/enclave/com.enclave.guest-bootstrap.plist",
@@ -87,14 +88,14 @@ build {
       "sudo touch /var/db/enclave/runtime-seal-required",
       "sudo chown root:wheel /var/db/enclave/runtime-seal-required",
       "sudo chmod 0600 /var/db/enclave/runtime-seal-required",
-      "test -f /var/db/enclave/runtime-seal-required",
+      "sudo test -f /var/db/enclave/runtime-seal-required",
       "sleep 2",
-      "test -f /var/db/enclave/runtime-seal-required",
+      "sudo test -f /var/db/enclave/runtime-seal-required",
       "sudo launchctl disable system/com.openssh.sshd",
       "sleep 2",
-      "test -f /var/db/enclave/runtime-seal-required",
-      "test -f /var/db/enclave/image-build-in-progress",
-      "test \"$(/usr/sbin/sysctl -n kern.bootsessionuuid)\" = \"$(tr -d '[:space:]' < /var/db/enclave/image-build-in-progress)\"",
+      "sudo test -f /var/db/enclave/runtime-seal-required",
+      "sudo test -f /var/db/enclave/image-build-in-progress",
+      "test \"$(/usr/sbin/sysctl -n kern.bootsessionuuid)\" = \"$(sudo cat /var/db/enclave/image-build-in-progress | tr -d '[:space:]')\"",
     ]
   }
 }
