@@ -464,6 +464,13 @@ build {
   provisioner "shell" {
     inline = [
       "sudo install -d -o root -g wheel -m 0700 /var/db/enclave",
+      // Replacing the LaunchDaemon plist in the final layer can cause launchd
+      // to run the bootstrap immediately and consume the marker while Packer
+      // is still connected. Remove the job from this boot, discard any
+      // builder-time receipt, then arm the marker for the first runtime boot.
+      // The plist remains installed and is loaded normally after cloning.
+      "sudo launchctl bootout system/com.enclave.guest-bootstrap || true",
+      "sudo rm -f /var/db/enclave/runtime-sealed.json",
       "sudo touch /var/db/enclave/runtime-seal-required",
       "sudo chown root:wheel /var/db/enclave/runtime-seal-required",
       "sudo chmod 0600 /var/db/enclave/runtime-seal-required",
