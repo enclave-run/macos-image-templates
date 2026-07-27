@@ -32,6 +32,8 @@ for artifact in "$sbxd_darwin" "$guest_bootstrap"; do
     exit 66
   fi
 done
+sbxd_darwin_sha256=$(shasum -a 256 "$sbxd_darwin" | awk '{print $1}')
+guest_bootstrap_sha256=$(shasum -a 256 "$guest_bootstrap" | awk '{print $1}')
 
 if [[ "$created_vms_file" != /* ]]; then
   echo "created VMs file must be absolute: $created_vms_file" >&2
@@ -89,7 +91,9 @@ packer init templates/base.pkr.hcl
 packer build \
   -var "vm_name=$base_name" \
   -var "sbxd_darwin_path=$sbxd_darwin" \
+  -var "sbxd_darwin_sha256=$sbxd_darwin_sha256" \
   -var "guest_bootstrap_path=$guest_bootstrap" \
+  -var "guest_bootstrap_sha256=$guest_bootstrap_sha256" \
   templates/base.pkr.hcl
 
 printf '%s\n' "$xcode_name" >>"$created_vms_file"
@@ -98,6 +102,10 @@ xcode_args=(
   -var "base_image=$base_name"
   -var "macos_version=$macos_version"
   -var "xcode_version=[\"$xcode_version\"]"
+  -var "sbxd_darwin_path=$sbxd_darwin"
+  -var "sbxd_darwin_sha256=$sbxd_darwin_sha256"
+  -var "guest_bootstrap_path=$guest_bootstrap"
+  -var "guest_bootstrap_sha256=$guest_bootstrap_sha256"
 )
 if [[ "$xcode_archive" == *.zip ]]; then
   xcode_args+=(

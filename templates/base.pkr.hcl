@@ -22,10 +22,38 @@ variable "sbxd_darwin_path" {
   description = "Absolute path to the pinned sbxd-darwin binary. Empty is allowed for template validation only."
 }
 
+variable "sbxd_darwin_sha256" {
+  type        = string
+  default     = ""
+  description = "Required SHA-256 of sbxd_darwin_path when supplied."
+
+  validation {
+    condition = (
+      var.sbxd_darwin_sha256 == ""
+      || can(regex("^[a-f0-9]{64}$", var.sbxd_darwin_sha256))
+    )
+    error_message = "sbxd-darwin SHA-256 must be empty or a lowercase SHA-256."
+  }
+}
+
 variable "guest_bootstrap_path" {
   type        = string
   default     = ""
   description = "Absolute path to the pinned root bootstrap helper. Empty is allowed for template validation only."
+}
+
+variable "guest_bootstrap_sha256" {
+  type        = string
+  default     = ""
+  description = "Required SHA-256 of guest_bootstrap_path when supplied."
+
+  validation {
+    condition = (
+      var.guest_bootstrap_sha256 == ""
+      || can(regex("^[a-f0-9]{64}$", var.guest_bootstrap_sha256))
+    )
+    error_message = "guest bootstrap SHA-256 must be empty or a lowercase SHA-256."
+  }
 }
 
 source "tart-cli" "tart" {
@@ -188,8 +216,8 @@ build {
     environment_vars = [
       "INSTALL_SBXD=${var.sbxd_darwin_path != "" ? "1" : "0"}",
       "INSTALL_BOOTSTRAP=${var.guest_bootstrap_path != "" ? "1" : "0"}",
-      "SBXD_SHA256=${var.sbxd_darwin_path != "" ? filesha256(var.sbxd_darwin_path) : ""}",
-      "GUEST_BOOTSTRAP_SHA256=${var.guest_bootstrap_path != "" ? filesha256(var.guest_bootstrap_path) : ""}",
+      "SBXD_SHA256=${var.sbxd_darwin_sha256}",
+      "GUEST_BOOTSTRAP_SHA256=${var.guest_bootstrap_sha256}",
     ]
   }
 }
