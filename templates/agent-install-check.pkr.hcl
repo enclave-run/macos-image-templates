@@ -97,6 +97,8 @@ build {
       "sudo test -f /var/db/enclave/runtime-seal-required",
       "sudo test -f /var/db/enclave/image-build-in-progress",
       "test \"$(/usr/sbin/sysctl -n kern.bootsessionuuid)\" = \"$(sudo cat /var/db/enclave/image-build-in-progress | tr -d '[:space:]')\"",
+      "sudo install -o root -g wheel -m 0644 /usr/local/libexec/enclave/com.enclave.guest-bootstrap.plist /Library/LaunchDaemons/com.enclave.guest-bootstrap.plist",
+      "test -f /Library/LaunchDaemons/com.enclave.guest-bootstrap.plist",
     ]
   }
 }
