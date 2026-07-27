@@ -23,6 +23,26 @@ test -f /Library/LaunchDaemons/com.enclave.guest-bootstrap.plist
 test -f /var/db/enclave/runtime-seal-required
 test -d /Users/admin/Library/Logs/Enclave
 
+for database in \
+  "/Library/Application Support/com.apple.TCC/TCC.db" \
+  "/Users/admin/Library/Application Support/com.apple.TCC/TCC.db"; do
+  test -f "$database"
+  for service in \
+    kTCCServiceAccessibility \
+    kTCCServiceScreenCapture \
+    kTCCServicePostEvent; do
+    count=$(sudo sqlite3 "$database" "
+      SELECT count(*)
+      FROM access
+      WHERE service = '$service'
+        AND client = '/usr/local/libexec/enclave/enclave-macos-ui'
+        AND client_type = 1
+        AND auth_value = 2;
+    ")
+    test "$count" = "1"
+  done
+done
+
 if security find-generic-password -a AppleID 2>/dev/null; then
   echo "unexpected Apple ID credential found" >&2
   exit 1
