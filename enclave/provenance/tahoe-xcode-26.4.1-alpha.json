@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "4804ef1ecec1ee0104c2e0470b09efa5a9a3642b",
+  "upstreamCommit": "cd2d1c66981fb28e17fbe908709f1008b25c462a",
+  "macos": {
+    "productVersion": "26.5",
+    "buildVersion": "25F71"
+  },
+  "xcode": [
+    "26.4.1 (17E202)"
+  ],
+  "simulatorRuntimes": [
+    "iOS 26.4.1 (23E254a)"
+  ],
+  "guestAgents": {
+    "sbxd-darwin": "sha256:40d75639292379a05f940d3ee112065e1c2d831a89d79d92a6a38f45115e41df",
+    "enclave-guest-bootstrap": "sha256:7dd33559bb76d36c763258c8fb381d121aba502024a52abcc36bc2c2c4e0c417"
+  },
+  "tartVersion": "2.34.0",
+  "imageDigest": "sha256:ed45f1b324217d0033b99aed3d0eeee3e3e66ebe3ff389fc78cd765ff1986011",
+  "acceptance": {
+    "passedAt": "2026-07-27T11:04:09Z",
+    "evidenceDigest": "sha256:87626ffe0144555581dac1ead18844b15b15d6d169b6564400987d522fefad05"
+  }
+}
