@@ -20,6 +20,12 @@ variable "xcode_version" {
   type = list(string)
 }
 
+variable "xcode_app_archive" {
+  type        = string
+  default     = ""
+  description = "Optional absolute path to a trusted zip containing Xcode.app. Internal bootstrap alternative to a signed XIP."
+}
+
 variable "additional_ios_builds" {
   type    = list(string)
   default = []
@@ -71,13 +77,13 @@ source "tart-cli" "tart" {
 }
 
 locals {
-  xcode_install_provisioners = [
+  xcode_install_provisioners = var.xcode_app_archive == "" ? [
     for version in reverse(sort(var.xcode_version)) : {
       type = "shell"
       inline = [
         "source ~/.zprofile",
         "sudo xcodes install ${version} --experimental-unxip --path /Users/admin/Downloads/Xcode_${version}.xip --select --empty-trash",
-        // get selected xcode path, strip /Contents/Developer and move to GitHub compatible locations
+        // get selected xcode path, strip /Contents/Developer and move to stable locations
         "INSTALLED_PATH=$(xcodes select -p)",
         "CONTENTS_DIR=$(dirname $INSTALLED_PATH)",
         "APP_DIR=$(dirname $CONTENTS_DIR)",
@@ -88,7 +94,7 @@ locals {
         "df -h",
       ]
     }
-  ]
+  ] : []
 }
 
 build {
@@ -111,9 +117,22 @@ build {
     ]
   }
 
-  provisioner "file" {
-    sources     = [for version in var.xcode_version : pathexpand("~/XcodesCache/Xcode_${version}.xip")]
-    destination = "/Users/admin/Downloads/"
+  dynamic "provisioner" {
+    for_each = var.xcode_app_archive == "" ? [1] : []
+    labels   = ["file"]
+    content {
+      sources     = [for version in var.xcode_version : pathexpand("~/XcodesCache/Xcode_${version}.xip")]
+      destination = "/Users/admin/Downloads/"
+    }
+  }
+
+  dynamic "provisioner" {
+    for_each = var.xcode_app_archive != "" ? [1] : []
+    labels   = ["file"]
+    content {
+      source      = var.xcode_app_archive
+      destination = "/Users/admin/Downloads/Xcode.app.zip"
+    }
   }
 
   provisioner "shell" {
@@ -130,6 +149,25 @@ build {
     labels   = ["shell"]
     content {
       inline = provisioner.value.inline
+    }
+  }
+
+  dynamic "provisioner" {
+    for_each = var.xcode_app_archive != "" ? [1] : []
+    labels   = ["shell"]
+    content {
+      inline = [
+        "source ~/.zprofile",
+        "test ${length(var.xcode_version)} -eq 1",
+        "sudo ditto -x -k /Users/admin/Downloads/Xcode.app.zip /Applications",
+        "rm /Users/admin/Downloads/Xcode.app.zip",
+        "test -d /Applications/Xcode.app",
+        "sudo mv /Applications/Xcode.app /Applications/Xcode_${var.xcode_version[0]}.app",
+        "sudo xcode-select -s /Applications/Xcode_${var.xcode_version[0]}.app/Contents/Developer",
+        "xcodebuild -runFirstLaunch",
+        "xcodebuild -downloadPlatform iOS",
+        "df -h",
+      ]
     }
   }
 
