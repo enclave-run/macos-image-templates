@@ -5,12 +5,25 @@ set -euo pipefail
 install_root=/usr/local/libexec/enclave
 sudo install -d -o root -g wheel -m 0755 "$install_root"
 sudo install -d -o root -g wheel -m 0700 /var/db/enclave
-# launchd can discover a newly installed plist asynchronously. Keep bootstrap
-# inert for the remainder of the bake; the final layer removes this sentinel
-# only after image acceptance has completed.
+# Fence bootstrap by the current boot session. The final image deliberately
+# retains this sentinel: a cloned runtime gets a new kern.bootsessionuuid, at
+# which point bootstrap removes the expired sentinel and seals the guest.
+build_boot_session=$(/usr/sbin/sysctl -n kern.bootsessionuuid)
+if [[ ! "$build_boot_session" =~ ^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}$ ]]; then
+  echo "invalid kern.bootsessionuuid: $build_boot_session" >&2
+  exit 66
+fi
+umask 077
+printf '%s\n' "$build_boot_session" > /tmp/enclave-image-build-sentinel
 sudo install -o root -g wheel -m 0600 \
-  /dev/null \
+  /tmp/enclave-image-build-sentinel \
   /var/db/enclave/image-build-in-progress
+rm -f /tmp/enclave-image-build-sentinel
+
+# A source image may contain an older job. Keep the job absent for the whole
+# bake, then publish the staged plist only as the final Xcode-image operation.
+sudo launchctl bootout system/com.enclave.guest-bootstrap >/dev/null 2>&1 || true
+sudo rm -f /Library/LaunchDaemons/com.enclave.guest-bootstrap.plist
 install -d -m 0700 /Users/admin/Library/Logs/Enclave
 
 verify_sha256() {
@@ -59,7 +72,7 @@ verify_sha256 \
   "guest bootstrap install"
 sudo install -o root -g wheel -m 0644 \
   /tmp/com.enclave.guest-bootstrap.plist \
-  /Library/LaunchDaemons/com.enclave.guest-bootstrap.plist
+  "$install_root/com.enclave.guest-bootstrap.plist"
 
 printf 'installed sbxd-darwin sha256=%s\n' "$SBXD_SHA256"
 printf 'installed guest-bootstrap sha256=%s\n' "$GUEST_BOOTSTRAP_SHA256"

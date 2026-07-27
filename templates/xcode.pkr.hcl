@@ -494,11 +494,10 @@ build {
   provisioner "shell" {
     inline = [
       "sudo install -d -o root -g wheel -m 0700 /var/db/enclave",
-      // Replacing the LaunchDaemon plist in the final layer can cause launchd
-      // to run the bootstrap immediately and consume the marker while Packer
-      // is still connected. Remove the job from this boot, discard any
-      // builder-time receipt, then arm the marker for the first runtime boot.
-      // The plist remains installed and is loaded normally after cloning.
+      // The agent installer removes the LaunchDaemon for the whole bake and
+      // stages its plist under /usr/local. Discard any builder-time receipt,
+      // then arm the marker. The boot-session sentinel remains in the final
+      // image and expires only when a clone starts under a different boot UUID.
       "sudo launchctl bootout system/com.enclave.guest-bootstrap || true",
       "sudo rm -f /var/db/enclave/runtime-sealed.json",
       "sudo touch /var/db/enclave/runtime-seal-required",
@@ -512,13 +511,15 @@ build {
       "chmod 0755 /tmp/enclave-image-acceptance.sh",
       "/tmp/enclave-image-acceptance.sh",
       "rm /tmp/enclave-image-acceptance.sh",
-      "sudo rm -f /var/db/enclave/image-build-in-progress",
-      "test ! -e /var/db/enclave/image-build-in-progress",
       "rm -rf ~/Downloads/* ~/.Trash/*",
       "xcrun simctl shutdown all || true",
       "xcrun simctl erase all || true",
       "history -p || true",
-      "rm -f ~/.zsh_history ~/.bash_history"
+      "rm -f ~/.zsh_history ~/.bash_history",
+      // Publish the bootstrap job last. If launchd discovers it before Packer
+      // shuts down, the same-boot sentinel makes the invocation a safe no-op.
+      "sudo install -o root -g wheel -m 0644 /usr/local/libexec/enclave/com.enclave.guest-bootstrap.plist /Library/LaunchDaemons/com.enclave.guest-bootstrap.plist",
+      "test -f /Library/LaunchDaemons/com.enclave.guest-bootstrap.plist"
     ]
   }
 }
