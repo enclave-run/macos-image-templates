@@ -32,7 +32,7 @@ variable "sbxd_darwin_sha256" {
       var.sbxd_darwin_sha256 == ""
       || can(regex("^[a-f0-9]{64}$", var.sbxd_darwin_sha256))
     )
-    error_message = "sbxd-darwin SHA-256 must be empty or a lowercase SHA-256."
+    error_message = "The sbxd-darwin SHA-256 must be empty or a lowercase SHA-256."
   }
 }
 
@@ -52,7 +52,7 @@ variable "guest_bootstrap_sha256" {
       var.guest_bootstrap_sha256 == ""
       || can(regex("^[a-f0-9]{64}$", var.guest_bootstrap_sha256))
     )
-    error_message = "guest bootstrap SHA-256 must be empty or a lowercase SHA-256."
+    error_message = "The guest bootstrap SHA-256 must be empty or a lowercase SHA-256."
   }
 }
 
