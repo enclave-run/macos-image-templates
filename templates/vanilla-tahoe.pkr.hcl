@@ -102,7 +102,7 @@ source "tart-cli" "tart" {
     # Navigate to "Screen Sharing" and enable it
     "<wait10s><tab><tab><tab><tab><tab><spacebar>",
     # Type in the password to allow enabling Screen Sharing
-    "<wait10s>admin<enter>",
+    "<wait10s>${var.builder_password}<enter>",
     # Navigate to "Remote Login" and enable it
     "<wait10s><tab><tab><tab><tab><tab><tab><tab><tab><tab><tab><tab><tab><spacebar>",
     # Quit System Settings
@@ -124,11 +124,8 @@ build {
     inline = [
       // Enable passwordless sudo
       "echo '${var.builder_password}' | sudo -S sh -c \"mkdir -p /etc/sudoers.d/; echo 'admin ALL=(ALL) NOPASSWD: ALL' | EDITOR=tee visudo /etc/sudoers.d/admin-nopasswd\"",
-      // Enable auto-login
-      //
-      // See https://github.com/xfreebird/kcpassword for details.
-      "echo '00000000: 1ced 3f4a bcbc ba2c caca 4e82' | sudo xxd -r - /etc/kcpassword",
-      "sudo defaults write /Library/Preferences/com.apple.loginwindow autoLoginUser admin",
+      // Generate the auto-login credential for this build's unique password.
+      "sudo sysadminctl -autologin set -userName admin -password '${var.builder_password}'",
       // Disable screensaver at login screen
       "sudo defaults write /Library/Preferences/com.apple.screensaver loginWindowIdleTime 0",
       // Disable screensaver for admin user
