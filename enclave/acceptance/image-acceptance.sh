@@ -10,6 +10,7 @@ find /Applications -maxdepth 1 -type d -name 'Xcode*.app' -print -quit |
 xcodebuild -version
 xcodebuild -checkFirstLaunchStatus
 xcrun simctl list runtimes
+df -k / | awk 'NR == 2 { exit !($2 > 120 * 1024 * 1024) }'
 test ! -e /Users/admin/actions-runner
 test ! -e /Library/LaunchAgents/org.cirruslabs.tart-guest-agent.plist
 test ! -e /Library/LaunchDaemons/org.cirruslabs.tart-guest-daemon.plist

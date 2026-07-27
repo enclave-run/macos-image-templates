@@ -143,6 +143,16 @@ build {
   }
 
   provisioner "shell" {
+    inline = [
+      // The Tart Packer plugin expands the virtual disk but does not grow the
+      // APFS container once the base layer has already removed the recovery
+      // partition. Grow it explicitly before transferring Xcode or runtimes.
+      "sudo diskutil apfs resizeContainer disk0s2 0",
+      "df -k / | awk 'NR == 2 { exit !($2 > 120 * 1024 * 1024) }'",
+    ]
+  }
+
+  provisioner "shell" {
     script = "scripts/automationmodetool.expect"
     environment_vars = [
       "BUILDER_PASSWORD=${var.builder_password}",
@@ -216,6 +226,7 @@ build {
         "codesign --verify --deep --strict --verbose=2 /Applications/Xcode_${var.xcode_version[0]}.app",
         "spctl --assess --type execute --verbose=2 /Applications/Xcode_${var.xcode_version[0]}.app",
         "sudo xcode-select -s /Applications/Xcode_${var.xcode_version[0]}.app/Contents/Developer",
+        "sudo xcodebuild -license accept",
         "xcodebuild -runFirstLaunch",
         "xcodebuild -downloadPlatform iOS",
         "df -h",
