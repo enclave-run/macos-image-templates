@@ -82,6 +82,18 @@ variable "disk_free_mb" {
   default = 15000
 }
 
+variable "sbxd_darwin_path" {
+  type        = string
+  default     = ""
+  description = "Absolute path to the pinned sbxd-darwin binary. When set, the final Xcode layer refreshes the base-installed binary before acceptance."
+}
+
+variable "guest_bootstrap_path" {
+  type        = string
+  default     = ""
+  description = "Absolute path to the pinned root bootstrap helper. When set, the final Xcode layer refreshes the base-installed binary before acceptance."
+}
+
 source "tart-cli" "tart" {
   vm_base_name = var.base_image
   // use tag or the last element of the xcode_version list
@@ -392,6 +404,45 @@ build {
       "source ~/.zprofile",
       "xcrun simctl runtime dyld_shared_cache update --all || sleep 180",
       "xcrun simctl list -v"
+    ]
+  }
+
+  # Reinstall the exact release inputs in the final layer. The base image
+  # contains these binaries so it can boot independently, but refreshing here
+  # prevents a long Xcode bake from publishing stale agent or bootstrap code.
+  dynamic "provisioner" {
+    for_each = var.sbxd_darwin_path != "" ? [1] : []
+    labels   = ["file"]
+    content {
+      source      = var.sbxd_darwin_path
+      destination = "/tmp/sbxd-darwin"
+    }
+  }
+
+  dynamic "provisioner" {
+    for_each = var.guest_bootstrap_path != "" ? [1] : []
+    labels   = ["file"]
+    content {
+      source      = var.guest_bootstrap_path
+      destination = "/tmp/enclave-guest-bootstrap"
+    }
+  }
+
+  provisioner "file" {
+    source      = "data/com.enclave.sbxd-darwin.plist"
+    destination = "/tmp/com.enclave.sbxd-darwin.plist"
+  }
+
+  provisioner "file" {
+    source      = "data/com.enclave.guest-bootstrap.plist"
+    destination = "/tmp/com.enclave.guest-bootstrap.plist"
+  }
+
+  provisioner "shell" {
+    script = "scripts/install-enclave-agents.sh"
+    environment_vars = [
+      "INSTALL_SBXD=${var.sbxd_darwin_path != "" ? "1" : "0"}",
+      "INSTALL_BOOTSTRAP=${var.guest_bootstrap_path != "" ? "1" : "0"}",
     ]
   }
 

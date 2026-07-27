@@ -52,6 +52,8 @@ packer build \
   -var base_image=tahoe-base \
   -var macos_version=tahoe \
   -var 'xcode_version=["26.6"]' \
+  -var sbxd_darwin_path=/absolute/path/to/sbxd-darwin \
+  -var guest_bootstrap_path=/absolute/path/to/enclave-guest-bootstrap \
   -var expected_runtimes_file=data/expected.tahoe.runtimes.txt \
   templates/xcode.pkr.hcl
 ```
