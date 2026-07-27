@@ -23,6 +23,7 @@ test -x /usr/local/libexec/enclave/enclave-guest-bootstrap
 test -f /Library/LaunchAgents/com.enclave.sbxd-darwin.plist
 test -f /Library/LaunchDaemons/com.enclave.guest-bootstrap.plist
 test -f /var/db/enclave/runtime-seal-required
+test -f /var/db/enclave/image-build-in-progress
 test -d /Users/admin/Library/Logs/Enclave
 test "$(sudo defaults read /Library/Preferences/com.apple.loginwindow autoLoginUser)" = admin
 test "$(stat -f '%Su:%Sg:%Lp' /etc/kcpassword)" = root:wheel:600

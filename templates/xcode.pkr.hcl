@@ -482,6 +482,8 @@ build {
       "chmod 0755 /tmp/enclave-image-acceptance.sh",
       "/tmp/enclave-image-acceptance.sh",
       "rm /tmp/enclave-image-acceptance.sh",
+      "sudo rm -f /var/db/enclave/image-build-in-progress",
+      "test ! -e /var/db/enclave/image-build-in-progress",
       "rm -rf ~/Downloads/* ~/.Trash/*",
       "xcrun simctl shutdown all || true",
       "xcrun simctl erase all || true",
