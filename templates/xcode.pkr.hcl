@@ -121,7 +121,7 @@ locals {
         "sudo mv $APP_DIR /Applications/Xcode_${version}.app",
         "sudo xcode-select -s /Applications/Xcode_${version}.app",
         "xcodebuild -downloadPlatform iOS",
-        "xcodebuild -runFirstLaunch",
+        "sudo xcodebuild -runFirstLaunch",
         "df -h",
       ]
     }
@@ -241,7 +241,7 @@ build {
         "spctl --assess --type execute --verbose=2 /Applications/Xcode_${var.xcode_version[0]}.app",
         "sudo xcode-select -s /Applications/Xcode_${var.xcode_version[0]}.app/Contents/Developer",
         "sudo xcodebuild -license accept",
-        "xcodebuild -runFirstLaunch",
+        "sudo xcodebuild -runFirstLaunch",
         "xcodebuild -downloadPlatform iOS",
         "df -h",
       ]
