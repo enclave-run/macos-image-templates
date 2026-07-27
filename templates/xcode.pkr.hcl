@@ -425,7 +425,7 @@ build {
     labels   = ["file"]
     content {
       source      = var.sbxd_darwin_path
-      destination = "/tmp/sbxd-darwin"
+      destination = "/tmp/enclave-upload-sbxd-darwin"
     }
   }
 
@@ -434,7 +434,7 @@ build {
     labels   = ["file"]
     content {
       source      = var.guest_bootstrap_path
-      destination = "/tmp/enclave-guest-bootstrap"
+      destination = "/tmp/enclave-upload-guest-bootstrap"
     }
   }
 
@@ -453,6 +453,8 @@ build {
     environment_vars = [
       "INSTALL_SBXD=${var.sbxd_darwin_path != "" ? "1" : "0"}",
       "INSTALL_BOOTSTRAP=${var.guest_bootstrap_path != "" ? "1" : "0"}",
+      "SBXD_SHA256=${var.sbxd_darwin_path != "" ? filesha256(var.sbxd_darwin_path) : ""}",
+      "GUEST_BOOTSTRAP_SHA256=${var.guest_bootstrap_path != "" ? filesha256(var.guest_bootstrap_path) : ""}",
     ]
   }
 

@@ -13,24 +13,53 @@ sudo install -o root -g wheel -m 0600 \
   /var/db/enclave/image-build-in-progress
 install -d -m 0700 /Users/admin/Library/Logs/Enclave
 
+verify_sha256() {
+  local path=$1
+  local expected=$2
+  local label=$3
+
+  if [[ ! "$expected" =~ ^[a-f0-9]{64}$ ]]; then
+    echo "missing or malformed expected SHA-256 for $label" >&2
+    exit 64
+  fi
+  local actual
+  actual=$(shasum -a 256 "$path" | awk '{print $1}')
+  if [[ "$actual" != "$expected" ]]; then
+    echo "$label SHA-256 mismatch: expected $expected, got $actual" >&2
+    exit 65
+  fi
+}
+
 if [[ "${INSTALL_SBXD:-0}" == "1" ]]; then
-  sudo install -o root -g wheel -m 0755 /tmp/sbxd-darwin "$install_root/sbxd-darwin"
+  verify_sha256 /tmp/enclave-upload-sbxd-darwin "$SBXD_SHA256" "sbxd-darwin upload"
+  sudo install -o root -g wheel -m 0755 \
+    /tmp/enclave-upload-sbxd-darwin \
+    "$install_root/sbxd-darwin"
+  verify_sha256 "$install_root/sbxd-darwin" "$SBXD_SHA256" "sbxd-darwin install"
   sudo install -o root -g wheel -m 0644 \
     /tmp/com.enclave.sbxd-darwin.plist \
     /Library/LaunchAgents/com.enclave.sbxd-darwin.plist
 fi
 
 if [[ "${INSTALL_BOOTSTRAP:-0}" == "1" ]]; then
+  verify_sha256 \
+    /tmp/enclave-upload-guest-bootstrap \
+    "$GUEST_BOOTSTRAP_SHA256" \
+    "guest bootstrap upload"
   sudo install -o root -g wheel -m 0755 \
-    /tmp/enclave-guest-bootstrap \
+    /tmp/enclave-upload-guest-bootstrap \
     "$install_root/enclave-guest-bootstrap"
+  verify_sha256 \
+    "$install_root/enclave-guest-bootstrap" \
+    "$GUEST_BOOTSTRAP_SHA256" \
+    "guest bootstrap install"
   sudo install -o root -g wheel -m 0644 \
     /tmp/com.enclave.guest-bootstrap.plist \
     /Library/LaunchDaemons/com.enclave.guest-bootstrap.plist
 fi
 
 rm -f \
-  /tmp/sbxd-darwin \
-  /tmp/enclave-guest-bootstrap \
+  /tmp/enclave-upload-sbxd-darwin \
+  /tmp/enclave-upload-guest-bootstrap \
   /tmp/com.enclave.sbxd-darwin.plist \
   /tmp/com.enclave.guest-bootstrap.plist
