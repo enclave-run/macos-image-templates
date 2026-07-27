@@ -80,6 +80,21 @@ build {
     inline = [
       "test \"$(shasum -a 256 /usr/local/libexec/enclave/sbxd-darwin | awk '{print $1}')\" = '${var.sbxd_darwin_sha256}'",
       "test \"$(shasum -a 256 /usr/local/libexec/enclave/enclave-guest-bootstrap | awk '{print $1}')\" = '${var.guest_bootstrap_sha256}'",
+      "test -f /usr/local/libexec/enclave/com.enclave.guest-bootstrap.plist",
+      "test ! -e /Library/LaunchDaemons/com.enclave.guest-bootstrap.plist",
+      "if sudo launchctl print system/com.enclave.guest-bootstrap >/dev/null 2>&1; then echo 'guest bootstrap remains registered during image build' >&2; exit 1; fi",
+      "sudo rm -f /var/db/enclave/runtime-sealed.json",
+      "sudo touch /var/db/enclave/runtime-seal-required",
+      "sudo chown root:wheel /var/db/enclave/runtime-seal-required",
+      "sudo chmod 0600 /var/db/enclave/runtime-seal-required",
+      "test -f /var/db/enclave/runtime-seal-required",
+      "sleep 2",
+      "test -f /var/db/enclave/runtime-seal-required",
+      "sudo launchctl disable system/com.openssh.sshd",
+      "sleep 2",
+      "test -f /var/db/enclave/runtime-seal-required",
+      "test -f /var/db/enclave/image-build-in-progress",
+      "test \"$(/usr/sbin/sysctl -n kern.bootsessionuuid)\" = \"$(tr -d '[:space:]' < /var/db/enclave/image-build-in-progress)\"",
     ]
   }
 }
