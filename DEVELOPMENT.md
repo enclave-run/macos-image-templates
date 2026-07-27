@@ -1,25 +1,44 @@
-## Building Vanilla Image
+# Development
 
-To build `macos-sonoma-vanilla`:
+## Validate without building
 
-```bash
-packer build templates/vanilla-sonoma.pkr.hcl
-```
-
-Optionally, SIP can be disabled for each image by running the following commands:
+The Tart Packer plugin currently publishes Darwin artifacts only, so
+`packer init` and `packer validate` must run on an Apple host. Linux can still
+run `packer fmt` and the Enclave boundary validator.
 
 ```bash
-packer build -var vm_name=sonoma-vanilla templates/disable-sip.pkr.hcl
+packer fmt -check -recursive templates
+
+for template in templates/vanilla-*.pkr.hcl; do
+  packer init "$template"
+  packer validate "$template"
+done
+
+packer init templates/base.pkr.hcl
+packer validate \
+  -var vm_name=template-validation-base \
+  templates/base.pkr.hcl
+
+packer init templates/xcode.pkr.hcl
+packer validate \
+  -var base_image=template-validation-base \
+  -var macos_version=tahoe \
+  -var 'xcode_version=["26.6"]' \
+  -var expected_runtimes_file=data/expected.tahoe.runtimes.txt \
+  templates/xcode.pkr.hcl
 ```
 
-## Building Base Image
+`scripts/validate-enclave-boundary.sh` additionally rejects Cirrus image
+parents, SIP-disable templates, CI runner payloads, and the upstream Tart guest
+agent.
 
-```bash
-packer build -var vm_name=sonoma-vanilla templates/base.pkr.hcl
-```
+## Updating upstream
 
-## Building Xcode Image
+1. Fetch `cirruslabs/main`.
+2. Review changes against the exact commit in `UPSTREAM.md`.
+3. Merge or cherry-pick only the unattended-install, Xcode, Simulator,
+   normalization, and validation changes Enclave needs.
+4. Re-run the boundary validator and Packer validation.
+5. Update `UPSTREAM.md` with the new reviewed commit and notable decisions.
 
-```bash
-packer build -var macos_version=sonoma -var xcode_version="[15.4]" templates/xcode.pkr.hcl
-```
+Published upstream images are never used as a fallback.

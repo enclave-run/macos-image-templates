@@ -1,7 +1,7 @@
 packer {
   required_plugins {
     tart = {
-      version = ">= 1.12.0"
+      version = "= 1.21.0"
       source  = "github.com/cirruslabs/tart"
     }
   }
@@ -9,6 +9,11 @@ packer {
 
 variable "macos_version" {
   type = string
+}
+
+variable "base_image" {
+  type        = string
+  description = "Enclave-owned local name or immutable OCI digest for the base image."
 }
 
 variable "xcode_version" {
@@ -52,13 +57,8 @@ variable "disk_free_mb" {
   default = 15000
 }
 
-variable "android_sdk_tools_version" {
-  type    = string
-  default = "14742923" # https://developer.android.com/studio#command-line-tools-only
-}
-
 source "tart-cli" "tart" {
-  vm_base_name = "ghcr.io/cirruslabs/macos-${var.macos_version}-base:latest"
+  vm_base_name = var.base_image
   // use tag or the last element of the xcode_version list
   vm_name      = "${var.macos_version}-xcode:${var.tag != "" ? var.tag : var.xcode_version[0]}"
   cpu_count    = 4
@@ -99,41 +99,7 @@ build {
       "source ~/.zprofile",
       "brew --version",
       "brew update",
-      "brew upgrade",
-      "brew install codex",
-      "brew install --cask claude-code",
-      "brew install --cask amazon-q"
-    ]
-  }
-
-  // Re-install the GitHub Actions runner
-  provisioner "shell" {
-    script = "scripts/install-actions-runner.sh"
-  }
-
-  // make sure our workaround from base is still valid
-  provisioner "shell" {
-    inline = [
-      "sudo ln -s /Users/admin /Users/runner || true"
-    ]
-  }
-
-  provisioner "shell" {
-    inline = [
-      "source ~/.zprofile",
-      "brew install openjdk@17",
-      "echo 'export PATH=\"/opt/homebrew/opt/openjdk@17/bin:$PATH\"' >> ~/.zprofile",
-      "echo 'export ANDROID_HOME=$HOME/android-sdk' >> ~/.zprofile",
-      "echo 'export ANDROID_SDK_ROOT=$ANDROID_HOME' >> ~/.zprofile",
-      "echo 'export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator' >> ~/.zprofile",
-      "source ~/.zprofile",
-      "wget -q https://dl.google.com/android/repository/commandlinetools-mac-${var.android_sdk_tools_version}_latest.zip -O android-sdk-tools.zip",
-      "mkdir -p $ANDROID_HOME/cmdline-tools/",
-      "unzip -q android-sdk-tools.zip -d $ANDROID_HOME/cmdline-tools/",
-      "rm android-sdk-tools.zip",
-      "mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest",
-      "yes | sdkmanager --licenses",
-      "yes | sdkmanager 'platform-tools' 'platforms;android-36' 'build-tools;36.0.0' 'ndk;28.2.13676358'"
+      "brew upgrade"
     ]
   }
 
@@ -269,21 +235,6 @@ build {
     }
   }
 
-  provisioner "shell" {
-    inline = [
-      "source ~/.zprofile",
-      "echo 'export FLUTTER_HOME=$HOME/flutter' >> ~/.zprofile",
-      "echo 'export PATH=$HOME/flutter:$HOME/flutter/bin/:$HOME/flutter/bin/cache/dart-sdk/bin:$PATH' >> ~/.zprofile",
-      "source ~/.zprofile",
-      "git clone https://github.com/flutter/flutter.git $FLUTTER_HOME",
-      "cd $FLUTTER_HOME",
-      "git checkout stable",
-      "flutter doctor --android-licenses",
-      "flutter doctor",
-      "flutter precache",
-    ]
-  }
-
   # useful utils for mobile development
   provisioner "shell" {
     inline = [
@@ -308,13 +259,6 @@ build {
     ]
   }
 
-  provisioner "shell" {
-    inline = [
-      "source ~/.zprofile",
-      "flutter doctor"
-    ]
-  }
-
   // check there is at least 15GB of free space and fail if not
   provisioner "shell" {
     inline = [
@@ -322,14 +266,6 @@ build {
       "df -h",
       "export FREE_MB=$(df -m | awk '{print $4}' | head -n 2 | tail -n 1)",
       "[[ $FREE_MB -gt ${var.disk_free_mb} ]] && echo OK || exit 1"
-    ]
-  }
-
-  // some other health checks
-  provisioner "shell" {
-    inline = [
-      "source ~/.zprofile",
-      "test -d /Users/runner"
     ]
   }
 
@@ -356,37 +292,21 @@ build {
     ]
   }
 
-  # Compatibility with GitHub Actions Runner Images, where
-  # /usr/local/bin belongs to the default user. Also see [2].
-  #
-  # [1]: https://github.com/actions/runner-images/blob/6bbddd20d76d61606bea5a0133c950cc44c370d3/images/macos/scripts/build/configure-machine.sh#L96
-  # [2]: https://github.com/actions/runner-images/discussions/7607
-  provisioner "shell" {
-    inline = [
-      "sudo chown admin /usr/local/bin"
-    ]
-  }
-
-  // Install setup-info-generator
-  provisioner "shell" {
-    inline = [
-      "source ~/.zprofile",
-      "brew install cirruslabs/cli/setup-info-generator"
-    ]
-  }
-
-  // Copy setup info template
   provisioner "file" {
-    source      = "data/setup-info-template.json"
-    destination = "~/setup-info-template.json"
+    source      = "enclave/acceptance/image-acceptance.sh"
+    destination = "/tmp/enclave-image-acceptance.sh"
   }
 
-  // Generate setup info
   provisioner "shell" {
     inline = [
-      "source ~/.zprofile",
-      "cat ~/setup-info-template.json | setup-info-generator > ~/actions-runner/.setup_info",
-      "rm ~/setup-info-template.json"
+      "chmod 0755 /tmp/enclave-image-acceptance.sh",
+      "/tmp/enclave-image-acceptance.sh",
+      "rm /tmp/enclave-image-acceptance.sh",
+      "rm -rf ~/Downloads/* ~/.Trash/*",
+      "xcrun simctl shutdown all || true",
+      "xcrun simctl erase all || true",
+      "history -p || true",
+      "rm -f ~/.zsh_history ~/.bash_history"
     ]
   }
 }

@@ -1,7 +1,7 @@
 packer {
   required_plugins {
     tart = {
-      version = ">= 1.12.0"
+      version = "= 1.21.0"
       source  = "github.com/cirruslabs/tart"
     }
   }
@@ -9,6 +9,24 @@ packer {
 
 variable "vm_name" {
   type = string
+}
+
+variable "sbxd_darwin_path" {
+  type        = string
+  default     = ""
+  description = "Absolute path to the pinned sbxd-darwin binary. Empty is allowed for template validation only."
+}
+
+variable "guest_bootstrap_path" {
+  type        = string
+  default     = ""
+  description = "Absolute path to the pinned root bootstrap helper. Empty is allowed for template validation only."
+}
+
+variable "macos_ui_path" {
+  type        = string
+  default     = ""
+  description = "Absolute path to the pinned macOS UI helper. Empty is allowed for template validation only."
 }
 
 source "tart-cli" "tart" {
@@ -63,8 +81,7 @@ build {
       "source ~/.zprofile",
       "brew --version",
       "brew update",
-      "brew install wget unzip zip ca-certificates cmake gcc git-lfs jq yq gh gitlab-runner",
-      "brew install buildkite/buildkite/buildkite-agent",
+      "brew install wget unzip zip ca-certificates cmake gcc git-lfs jq yq gh",
       "brew install equinix-labs/otel-cli/otel-cli",
       "brew install curl || true", // doesn't work on Monterey
       "brew install --cask git-credential-manager",
@@ -83,21 +100,6 @@ build {
   provisioner "file" {
     source      = "data/github_known_hosts"
     destination = "~/.ssh/known_hosts"
-  }
-
-  // Install the GitHub Actions runner
-  provisioner "shell" {
-    script = "scripts/install-actions-runner.sh"
-  }
-
-  // Create a /Users/runner → /Users/admin symlink to support certain GitHub Actions
-  // like ruby/setup-ruby that hard-code the "/Users/runner/hostedtoolcache" path[1]
-  //
-  // [1]: https://github.com/ruby/setup-ruby/blob/6bd3d993c602f6b675728ebaecb2b569ff86e99b/common.js#L268
-  provisioner "shell" {
-    inline = [
-      "sudo ln -s /Users/admin /Users/runner"
-    ]
   }
 
   provisioner "shell" {
@@ -146,35 +148,54 @@ build {
   provisioner "shell" {
     inline = [
       "source ~/.zprofile",
-      "test -d /Users/runner",
+      "test -d /Users/admin",
       "test -f ~/.ssh/known_hosts"
     ]
   }
 
-  // Guest agent for Tart VMs
-  provisioner "file" {
-    source      = "data/tart-guest-daemon.plist"
-    destination = "~/tart-guest-daemon.plist"
+  dynamic "provisioner" {
+    for_each = var.sbxd_darwin_path != "" ? [1] : []
+    labels   = ["file"]
+    content {
+      source      = var.sbxd_darwin_path
+      destination = "/tmp/sbxd-darwin"
+    }
   }
-  provisioner "file" {
-    source      = "data/tart-guest-agent.plist"
-    destination = "~/tart-guest-agent.plist"
+
+  dynamic "provisioner" {
+    for_each = var.guest_bootstrap_path != "" ? [1] : []
+    labels   = ["file"]
+    content {
+      source      = var.guest_bootstrap_path
+      destination = "/tmp/enclave-guest-bootstrap"
+    }
   }
+
+  dynamic "provisioner" {
+    for_each = var.macos_ui_path != "" ? [1] : []
+    labels   = ["file"]
+    content {
+      source      = var.macos_ui_path
+      destination = "/tmp/enclave-macos-ui"
+    }
+  }
+
+  provisioner "file" {
+    source      = "data/com.enclave.sbxd-darwin.plist"
+    destination = "/tmp/com.enclave.sbxd-darwin.plist"
+  }
+
+  provisioner "file" {
+    source      = "data/com.enclave.guest-bootstrap.plist"
+    destination = "/tmp/com.enclave.guest-bootstrap.plist"
+  }
+
   provisioner "shell" {
-    inline = [
-      # Install Tart Guest Agent
-      "source ~/.zprofile",
-      "brew install cirruslabs/cli/tart-guest-agent",
-
-      # Install daemon variant of the Tart Guest Agent
-      "sudo mv ~/tart-guest-daemon.plist /Library/LaunchDaemons/org.cirruslabs.tart-guest-daemon.plist",
-      "sudo chown root:wheel /Library/LaunchDaemons/org.cirruslabs.tart-guest-daemon.plist",
-      "sudo chmod 0644 /Library/LaunchDaemons/org.cirruslabs.tart-guest-daemon.plist",
-
-      # Install agent variant of the Tart Guest Agent
-      "sudo mv ~/tart-guest-agent.plist /Library/LaunchAgents/org.cirruslabs.tart-guest-agent.plist",
-      "sudo chown root:wheel /Library/LaunchAgents/org.cirruslabs.tart-guest-agent.plist",
-      "sudo chmod 0644 /Library/LaunchAgents/org.cirruslabs.tart-guest-agent.plist",
+    script = "scripts/install-enclave-agents.sh"
+    environment_vars = [
+      "INSTALL_SBXD=${var.sbxd_darwin_path != "" ? "1" : "0"}",
+      "INSTALL_BOOTSTRAP=${var.guest_bootstrap_path != "" ? "1" : "0"}",
+      "INSTALL_MACOS_UI=${var.macos_ui_path != "" ? "1" : "0"}",
     ]
   }
 

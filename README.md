@@ -1,25 +1,76 @@
-## macOS Packer Templates for Tart
+# Enclave macOS Image Templates
 
-Repository with Packer templates to build macOS [Tart](https://tart.run/) virtual machines to use with self-hosted
-GitHub Actions runners, [Cirrus Runners](https://cirrus-runners.app/) or [any other automation](https://tart.run/integrations/cirrus-cli/).
+Enclave-owned Packer templates for building managed Tart images used by secure,
+interactive coding-agent sandboxes.
 
-The following image variants are currently available:
+This repository is forked from
+[`cirruslabs/macos-image-templates`](https://github.com/cirruslabs/macos-image-templates)
+at commit `cd2d1c66981fb28e17fbe908709f1008b25c462a`. The upstream MIT
+license is retained. See [UPSTREAM.md](UPSTREAM.md) and [NOTICE.md](NOTICE.md)
+for provenance and the Enclave change boundary.
 
-* `macos-{tahoe,sequoia,sonoma}-vanilla` — a vanilla macOS installation with helpful tweaks such as auto-login, but no additional software preinstalled
-* `macos-{tahoe,sequoia,sonoma}-base` — based on `macos-{tahoe,sequoia,sonoma}-vanilla` image, it comes with `brew` and [other useful software](https://github.com/cirruslabs/macos-image-templates/blob/main/templates/base.pkr.hcl) pre-installed, but without Xcode
-* `macos-{tahoe,sequoia,sonoma}-xcode:N` — based on `macos-{tahoe,sequoia,sonoma}-base` image and has `Xcode N` with [`Flutter`](https://flutter.dev/) pre-installed
-* `macos-runner:{tahoe,sequoia,sonoma}` — a variant of `xcode:N` with several versions of `Xcode` pre-installed and [`xcodes` tool](https://github.com/XcodesOrg/xcodes) to switch between them.
+## Image chain
 
-See a full list of VMs available [here](https://github.com/orgs/cirruslabs/packages?tab=packages&q=macos-).
+```text
+Apple IPSW
+  -> ghcr.io/enclave-run/macos-<version>-vanilla@sha256:...
+  -> ghcr.io/enclave-run/macos-<version>-base@sha256:...
+  -> ghcr.io/enclave-run/macos-<version>-xcode:<xcode-version>@sha256:...
+```
 
-## Release Cadence
+No production layer may use a `ghcr.io/cirruslabs/...` image as a parent.
+Builds preserve SIP and AMFI, contain no CI runner registration, and do not
+install the FSL Tart guest agent. Enclave guest binaries are supplied as pinned
+build inputs and installed by the base template.
 
-Once a new version of Xcode is released, we will initiate a GitHub release which will automatically build and push
-a new version of the `macos-{tahoe,sequoia}-xcode:N`. This generally happens the next weekend after a release.
-Please watch this repository releases to get notified about new images.
+## Build
 
-## Update Cadence
+Prerequisites on a dedicated Apple Silicon builder:
 
-Some of the images are regularly getting rebuild in order to update the pre-installed packages. 
+- Tart 2.34.0 (internal evaluation only until the production license gate is
+  satisfied);
+- Packer with the Tart plugin;
+- enough local disk for vanilla, base, and Xcode layers;
+- an Xcode `.xip` already downloaded to `~/XcodesCache`.
 
-[This workflow](.github/workflows/monthly.yml) defines images that are getting rebuilt monthly on the first Saturday of the month.
+Build the full Tahoe chain:
+
+```bash
+packer init templates/vanilla-tahoe.pkr.hcl
+packer build templates/vanilla-tahoe.pkr.hcl
+
+tart clone tahoe-vanilla tahoe-base
+packer init templates/base.pkr.hcl
+packer build \
+  -var vm_name=tahoe-base \
+  -var sbxd_darwin_path=/absolute/path/to/sbxd-darwin \
+  -var guest_bootstrap_path=/absolute/path/to/enclave-guest-bootstrap \
+  -var macos_ui_path=/absolute/path/to/enclave-macos-ui \
+  templates/base.pkr.hcl
+
+packer init templates/xcode.pkr.hcl
+packer build \
+  -var base_image=tahoe-base \
+  -var macos_version=tahoe \
+  -var 'xcode_version=["26.6"]' \
+  -var expected_runtimes_file=data/expected.tahoe.runtimes.txt \
+  templates/xcode.pkr.hcl
+```
+
+The release workflow pushes only Enclave-owned repositories and records the
+source commit, tool versions, image manifest, acceptance results, and digest.
+Alias promotion happens in Enclave’s image catalogue after per-node
+activation—not inside this repository.
+
+## Security invariants
+
+- SIP and AMFI remain enabled.
+- No Apple ID, Fastlane session, reusable token, SSH build key, or CI
+  registration survives the build.
+- The development user auto-logs in because Xcode, Simulator, Accessibility,
+  and LaunchAgent behavior require a GUI session.
+- Customer code runs through `sbxd-darwin`; the root bootstrap helper has a
+  fixed boot/disk responsibility and never executes customer commands.
+- Simulator, Keychain, clipboard, shell history, downloads, and temporary
+  provisioning state are normalized before publishing.
+- Every release runs `enclave/acceptance/image-acceptance.sh`.

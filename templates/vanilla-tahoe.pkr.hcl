@@ -1,12 +1,12 @@
 packer {
   required_plugins {
     tart = {
-      version = ">= 1.16.0"
+      version = "= 1.21.0"
       source  = "github.com/cirruslabs/tart"
     }
     ansible = {
       version = "~> 1"
-      source = "github.com/hashicorp/ansible"
+      source  = "github.com/hashicorp/ansible"
     }
   }
 }
@@ -97,19 +97,6 @@ source "tart-cli" "tart" {
     "<wait10s><tab><tab><tab><tab><tab><tab><tab><tab><tab><tab><tab><tab><spacebar>",
     # Quit System Settings
     "<wait10s><leftAltOn>q<leftAltOff>",
-    # Disable Gatekeeper (1/2)
-    "<wait10s>sudo spctl --global-disable<enter>",
-    "<wait10s>admin<enter>",
-    # Disable Gatekeeper (2/2)
-    # On Tahoe opening System Settings through Spotlight is not very reliable, sometimes opens System information
-    "<wait10s>open '/System/Applications/System Settings.app'<enter>",
-    "<wait10s><leftCtrlOn><f2><leftCtrlOff><right><right><right><down>Privacy & Security<enter>",
-    "<wait10s><leftShiftOn><tab><tab><tab><tab><tab><tab><leftShiftOff>",
-    "<wait10s><down><wait1s><down><wait1s><enter>",
-    "<wait10s>admin<enter>",
-    "<wait10s><leftShiftOn><tab><leftShiftOff><wait1s><spacebar>",
-    # Quit System Settings
-    "<wait10s><leftAltOn>q<leftAltOff>",
   ]
 
   // A (hopefully) temporary workaround for Virtualization.Framework's
@@ -156,8 +143,8 @@ build {
 
   provisioner "shell" {
     inline = [
-      # Ensure that Gatekeeper is disabled
-      "spctl --status | grep -q 'assessments disabled'"
+      # Enclave images retain the stock application assessment policy.
+      "spctl --status | grep -q 'assessments enabled'"
     ]
   }
 }

@@ -1,12 +1,12 @@
 packer {
   required_plugins {
     tart = {
-      version = ">= 1.12.0"
+      version = "= 1.21.0"
       source  = "github.com/cirruslabs/tart"
     }
     ansible = {
       version = "~> 1"
-      source = "github.com/hashicorp/ansible"
+      source  = "github.com/hashicorp/ansible"
     }
   }
 }

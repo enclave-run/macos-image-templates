@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enclave.run/schemas/macos-image-manifest.json",
+  "title": "Enclave macOS image manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sourceCommit",
+    "macos",
+    "xcode",
+    "guestAgents",
+    "tartVersion",
+    "imageDigest",
+    "acceptance"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "sourceCommit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "upstreamCommit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "macos": {
+      "type": "object",
+      "required": ["productVersion", "buildVersion"],
+      "properties": {
+        "productVersion": { "type": "string" },
+        "buildVersion": { "type": "string" }
+      }
+    },
+    "xcode": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "simulatorRuntimes": { "type": "array", "items": { "type": "string" } },
+    "guestAgents": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "tartVersion": { "type": "string" },
+    "imageDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "acceptance": {
+      "type": "object",
+      "required": ["passedAt", "evidenceDigest"],
+      "properties": {
+        "passedAt": { "type": "string", "format": "date-time" },
+        "evidenceDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      }
+    }
+  }
+}

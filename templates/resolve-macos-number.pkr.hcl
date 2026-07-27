@@ -1,7 +1,7 @@
 packer {
   required_plugins {
     tart = {
-      version = ">= 1.12.0"
+      version = "= 1.21.0"
       source  = "github.com/cirruslabs/tart"
     }
   }
@@ -41,8 +41,8 @@ build {
   }
 
   provisioner "file" {
-    source = "/tmp/sw-vers-product-version.txt"
+    source      = "/tmp/sw-vers-product-version.txt"
     destination = "${var.resolve_file}"
-    direction = "download"
+    direction   = "download"
   }
 }

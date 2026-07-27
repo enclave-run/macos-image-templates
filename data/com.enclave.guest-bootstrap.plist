@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.enclave.guest-bootstrap</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/libexec/enclave/enclave-guest-bootstrap</string>
+    <string>prepare</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <false/>
+  <key>UserName</key>
+  <string>root</string>
+  <key>StandardOutPath</key>
+  <string>/var/log/enclave-guest-bootstrap.log</string>
+  <key>StandardErrorPath</key>
+  <string>/var/log/enclave-guest-bootstrap.log</string>
+</dict>
+</plist>

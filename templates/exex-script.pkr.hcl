@@ -1,7 +1,7 @@
 packer {
   required_plugins {
     tart = {
-      version = ">= 1.12.0"
+      version = "= 1.21.0"
       source  = "github.com/cirruslabs/tart"
     }
   }
@@ -33,7 +33,7 @@ build {
   sources = ["source.tart-cli.tart"]
 
   provisioner "shell" {
-    script = var.script_path
+    script       = var.script_path
     pause_before = var.pause_before
   }
 }

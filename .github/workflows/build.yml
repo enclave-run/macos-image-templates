@@ -1,0 +1,92 @@
+name: Build Enclave Image Chain
+
+on:
+  workflow_dispatch:
+    inputs:
+      macos_version:
+        description: macOS release name
+        required: true
+        default: tahoe
+        type: choice
+        options:
+          - tahoe
+          - sequoia
+          - sonoma
+      xcode_version:
+        description: Exact Xcode version already present in ~/XcodesCache
+        required: true
+        type: string
+      publish:
+        description: Push Enclave-owned OCI images after acceptance
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+concurrency:
+  group: enclave-macos-image-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: [self-hosted, macOS, ARM64, enclave-image-builder]
+    timeout-minutes: 360
+    environment: macos-image-release
+    env:
+      MACOS_VERSION: ${{ inputs.macos_version }}
+      XCODE_VERSION: ${{ inputs.xcode_version }}
+      TART_REGISTRY_HOSTNAME: ghcr.io
+      TART_REGISTRY_USERNAME: ${{ github.actor }}
+      TART_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify pinned builder tools
+        run: |
+          set -euo pipefail
+          test "$(tart --version)" = "2.34.0"
+          packer version
+          scripts/validate-enclave-boundary.sh
+      - name: Fetch signed Enclave guest artifacts
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts
+          gh release download \
+            --repo enclave-run/infra \
+            --pattern 'sbxd-darwin' \
+            --pattern 'enclave-guest-bootstrap' \
+            --pattern 'enclave-macos-ui' \
+            --dir .artifacts
+          test -f .artifacts/sbxd-darwin
+          test -f .artifacts/enclave-guest-bootstrap
+          test -f .artifacts/enclave-macos-ui
+      - name: Build and accept full chain
+        run: |
+          scripts/build-chain.sh \
+            "$MACOS_VERSION" \
+            "$XCODE_VERSION" \
+            "$PWD/.artifacts/sbxd-darwin" \
+            "$PWD/.artifacts/enclave-guest-bootstrap" \
+            "$PWD/.artifacts/enclave-macos-ui"
+      - name: Publish Enclave-owned images
+        if: inputs.publish
+        run: |
+          set -euo pipefail
+          tart push "$MACOS_VERSION-vanilla" \
+            "ghcr.io/enclave-run/macos-$MACOS_VERSION-vanilla:${GITHUB_SHA}"
+          tart push "$MACOS_VERSION-base" \
+            "ghcr.io/enclave-run/macos-$MACOS_VERSION-base:${GITHUB_SHA}"
+          tart push "$MACOS_VERSION-xcode:$XCODE_VERSION" \
+            "ghcr.io/enclave-run/macos-$MACOS_VERSION-xcode:$XCODE_VERSION"
+      - name: Cleanup build VMs
+        if: always()
+        run: |
+          tart delete "$MACOS_VERSION-vanilla" || true
+          tart delete "$MACOS_VERSION-base" || true
+          tart delete "$MACOS_VERSION-xcode:$XCODE_VERSION" || true
+          rm -rf .artifacts
