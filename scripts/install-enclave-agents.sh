@@ -30,33 +30,39 @@ verify_sha256() {
   fi
 }
 
-if [[ "${INSTALL_SBXD:-0}" == "1" ]]; then
-  verify_sha256 /tmp/enclave-upload-sbxd-darwin "$SBXD_SHA256" "sbxd-darwin upload"
-  sudo install -o root -g wheel -m 0755 \
-    /tmp/enclave-upload-sbxd-darwin \
-    "$install_root/sbxd-darwin"
-  verify_sha256 "$install_root/sbxd-darwin" "$SBXD_SHA256" "sbxd-darwin install"
-  sudo install -o root -g wheel -m 0644 \
-    /tmp/com.enclave.sbxd-darwin.plist \
-    /Library/LaunchAgents/com.enclave.sbxd-darwin.plist
+if [[ "${INSTALL_SBXD:-0}" != "1" || "${INSTALL_BOOTSTRAP:-0}" != "1" ]]; then
+  echo "owned images require both sbxd-darwin and guest bootstrap artifacts" >&2
+  exit 64
 fi
 
-if [[ "${INSTALL_BOOTSTRAP:-0}" == "1" ]]; then
-  verify_sha256 \
-    /tmp/enclave-upload-guest-bootstrap \
-    "$GUEST_BOOTSTRAP_SHA256" \
-    "guest bootstrap upload"
-  sudo install -o root -g wheel -m 0755 \
-    /tmp/enclave-upload-guest-bootstrap \
-    "$install_root/enclave-guest-bootstrap"
-  verify_sha256 \
-    "$install_root/enclave-guest-bootstrap" \
-    "$GUEST_BOOTSTRAP_SHA256" \
-    "guest bootstrap install"
-  sudo install -o root -g wheel -m 0644 \
-    /tmp/com.enclave.guest-bootstrap.plist \
-    /Library/LaunchDaemons/com.enclave.guest-bootstrap.plist
-fi
+verify_sha256 /tmp/enclave-upload-sbxd-darwin "$SBXD_SHA256" "sbxd-darwin upload"
+sudo rm -f "$install_root/sbxd-darwin"
+sudo install -o root -g wheel -m 0755 \
+  /tmp/enclave-upload-sbxd-darwin \
+  "$install_root/sbxd-darwin"
+verify_sha256 "$install_root/sbxd-darwin" "$SBXD_SHA256" "sbxd-darwin install"
+sudo install -o root -g wheel -m 0644 \
+  /tmp/com.enclave.sbxd-darwin.plist \
+  /Library/LaunchAgents/com.enclave.sbxd-darwin.plist
+
+verify_sha256 \
+  /tmp/enclave-upload-guest-bootstrap \
+  "$GUEST_BOOTSTRAP_SHA256" \
+  "guest bootstrap upload"
+sudo rm -f "$install_root/enclave-guest-bootstrap"
+sudo install -o root -g wheel -m 0755 \
+  /tmp/enclave-upload-guest-bootstrap \
+  "$install_root/enclave-guest-bootstrap"
+verify_sha256 \
+  "$install_root/enclave-guest-bootstrap" \
+  "$GUEST_BOOTSTRAP_SHA256" \
+  "guest bootstrap install"
+sudo install -o root -g wheel -m 0644 \
+  /tmp/com.enclave.guest-bootstrap.plist \
+  /Library/LaunchDaemons/com.enclave.guest-bootstrap.plist
+
+printf 'installed sbxd-darwin sha256=%s\n' "$SBXD_SHA256"
+printf 'installed guest-bootstrap sha256=%s\n' "$GUEST_BOOTSTRAP_SHA256"
 
 rm -f \
   /tmp/enclave-upload-sbxd-darwin \
