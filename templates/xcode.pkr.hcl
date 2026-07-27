@@ -146,7 +146,9 @@ build {
     inline = [
       // The Tart Packer plugin expands the virtual disk but does not grow the
       // APFS container once the base layer has already removed the recovery
-      // partition. Grow it explicitly before transferring Xcode or runtimes.
+      // partition. Repair the backup GPT onto the expanded virtual disk, then
+      // grow APFS explicitly before transferring Xcode or runtimes.
+      "printf 'y\\n' | sudo diskutil repairDisk disk0",
       "sudo diskutil apfs resizeContainer disk0s2 0",
       "df -k / | awk 'NR == 2 { exit !($2 > 120 * 1024 * 1024) }'",
     ]
