@@ -25,7 +25,7 @@ on:
 permissions:
   contents: read
   packages: write
-  id-token: write
+  attestations: read
 
 concurrency:
   group: enclave-macos-image-build
@@ -42,6 +42,8 @@ jobs:
       TART_REGISTRY_HOSTNAME: ghcr.io
       TART_REGISTRY_USERNAME: ${{ github.actor }}
       TART_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+      GH_TOKEN: ${{ secrets.ENCLAVE_INFRA_READ_TOKEN }}
+      CREATED_VMS_FILE: ${{ runner.temp }}/enclave-created-vms-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -61,10 +63,13 @@ jobs:
             --pattern 'sbxd-darwin' \
             --pattern 'enclave-guest-bootstrap' \
             --pattern 'enclave-macos-ui' \
+            --pattern 'SHA256SUMS' \
             --dir .artifacts
-          test -f .artifacts/sbxd-darwin
-          test -f .artifacts/enclave-guest-bootstrap
-          test -f .artifacts/enclave-macos-ui
+          scripts/verify-release-artifacts.sh "$PWD/.artifacts"
+          for artifact in sbxd-darwin enclave-guest-bootstrap enclave-macos-ui; do
+            gh attestation verify ".artifacts/$artifact" \
+              --repo enclave-run/infra
+          done
       - name: Build and accept full chain
         run: |
           scripts/build-chain.sh \
@@ -72,7 +77,8 @@ jobs:
             "$XCODE_VERSION" \
             "$PWD/.artifacts/sbxd-darwin" \
             "$PWD/.artifacts/enclave-guest-bootstrap" \
-            "$PWD/.artifacts/enclave-macos-ui"
+            "$PWD/.artifacts/enclave-macos-ui" \
+            "$CREATED_VMS_FILE"
       - name: Publish Enclave-owned images
         if: inputs.publish
         run: |
@@ -82,11 +88,9 @@ jobs:
           tart push "$MACOS_VERSION-base" \
             "ghcr.io/enclave-run/macos-$MACOS_VERSION-base:${GITHUB_SHA}"
           tart push "$MACOS_VERSION-xcode:$XCODE_VERSION" \
-            "ghcr.io/enclave-run/macos-$MACOS_VERSION-xcode:$XCODE_VERSION"
+            "ghcr.io/enclave-run/macos-$MACOS_VERSION-xcode:${GITHUB_SHA}"
       - name: Cleanup build VMs
         if: always()
         run: |
-          tart delete "$MACOS_VERSION-vanilla" || true
-          tart delete "$MACOS_VERSION-base" || true
-          tart delete "$MACOS_VERSION-xcode:$XCODE_VERSION" || true
-          rm -rf .artifacts
+          scripts/cleanup-created-vms.sh "$CREATED_VMS_FILE"
+          rm -rf "$GITHUB_WORKSPACE/.artifacts"

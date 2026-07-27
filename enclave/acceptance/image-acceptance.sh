@@ -15,6 +15,13 @@ test ! -e /Library/LaunchAgents/org.cirruslabs.tart-guest-agent.plist
 test ! -e /Library/LaunchDaemons/org.cirruslabs.tart-guest-daemon.plist
 test ! -e /opt/homebrew/bin/tart-guest-agent
 test ! -e /Users/runner
+test -x /usr/local/libexec/enclave/sbxd-darwin
+test -x /usr/local/libexec/enclave/enclave-guest-bootstrap
+test -x /usr/local/libexec/enclave/enclave-macos-ui
+test -f /Library/LaunchAgents/com.enclave.sbxd-darwin.plist
+test -f /Library/LaunchDaemons/com.enclave.guest-bootstrap.plist
+test -f /var/db/enclave/runtime-seal-required
+test -d /Users/admin/Library/Logs/Enclave
 
 if security find-generic-password -a AppleID 2>/dev/null; then
   echo "unexpected Apple ID credential found" >&2

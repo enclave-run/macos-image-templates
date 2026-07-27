@@ -11,6 +11,16 @@ packer {
   }
 }
 
+variable "builder_password" {
+  type      = string
+  sensitive = true
+
+  validation {
+    condition     = can(regex("^[a-f0-9]{32}$", var.builder_password))
+    error_message = "Builder password must be a 32-character lowercase hex value."
+  }
+}
+
 source "tart-cli" "tart" {
   // will be update to 14.8.2
   from_ipsw    = "https://updates.cdn-apple.com/2024SummerFCS/fullrestores/062-52859/932E0A8F-6644-4759-82DA-F8FA8DEA806A/UniversalMac_14.6.1_23G93_Restore.ipsw"
@@ -18,7 +28,7 @@ source "tart-cli" "tart" {
   cpu_count    = 4
   memory_gb    = 8
   disk_size_gb = 50
-  ssh_password = "admin"
+  ssh_password = var.builder_password
   ssh_username = "admin"
   ssh_timeout  = "180s"
   boot_command = [
@@ -51,7 +61,7 @@ source "tart-cli" "tart" {
     # I have read and agree to the macOS Software License Agreement
     "<wait10s><tab><spacebar>",
     # Create a Computer Account
-    "<wait10s>admin<tab><tab>admin<tab>admin<tab><tab><tab><spacebar>",
+    "<wait10s>admin<tab><tab>${var.builder_password}<tab>${var.builder_password}<tab><tab><tab><spacebar>",
     # Enable Location Services
     "<wait30s><leftShiftOn><tab><leftShiftOff><spacebar>",
     # Are you sure you don't want to use Location Services?
@@ -94,7 +104,7 @@ build {
   provisioner "shell" {
     inline = [
       // Enable passwordless sudo
-      "echo admin | sudo -S sh -c \"mkdir -p /etc/sudoers.d/; echo 'admin ALL=(ALL) NOPASSWD: ALL' | EDITOR=tee visudo /etc/sudoers.d/admin-nopasswd\"",
+      "echo '${var.builder_password}' | sudo -S sh -c \"mkdir -p /etc/sudoers.d/; echo 'admin ALL=(ALL) NOPASSWD: ALL' | EDITOR=tee visudo /etc/sudoers.d/admin-nopasswd\"",
       // Enable auto-login
       //
       // See https://github.com/xfreebird/kcpassword for details.
@@ -120,7 +130,7 @@ build {
       //
       // Note that this only works if the user is logged-in,
       // i.e. not on login screen.
-      "sysadminctl -screenLock off -password admin",
+      "sysadminctl -screenLock off -password '${var.builder_password}'",
     ]
   }
 

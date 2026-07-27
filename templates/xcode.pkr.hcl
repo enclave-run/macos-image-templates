@@ -11,6 +11,11 @@ variable "macos_version" {
   type = string
 }
 
+variable "builder_password" {
+  type      = string
+  sensitive = true
+}
+
 variable "base_image" {
   type        = string
   description = "Enclave-owned local name or immutable OCI digest for the base image."
@@ -24,6 +29,20 @@ variable "xcode_app_archive" {
   type        = string
   default     = ""
   description = "Optional absolute path to a trusted zip containing Xcode.app. Internal bootstrap alternative to a signed XIP."
+}
+
+variable "xcode_app_archive_sha256" {
+  type        = string
+  default     = ""
+  description = "Required SHA-256 of xcode_app_archive when the trusted zip bootstrap is used."
+
+  validation {
+    condition = (
+      var.xcode_app_archive_sha256 == ""
+      || can(regex("^[a-f0-9]{64}$", var.xcode_app_archive_sha256))
+    )
+    error_message = "Xcode app archive SHA-256 must be empty or a lowercase SHA-256."
+  }
 }
 
 variable "additional_ios_builds" {
@@ -71,7 +90,7 @@ source "tart-cli" "tart" {
   memory_gb    = 8
   disk_size_gb = var.disk_size
   headless     = true
-  ssh_password = "admin"
+  ssh_password = var.builder_password
   ssh_username = "admin"
   ssh_timeout  = "120s"
 }
@@ -159,10 +178,13 @@ build {
       inline = [
         "source ~/.zprofile",
         "test ${length(var.xcode_version)} -eq 1",
+        "printf '%s  %s\\n' '${var.xcode_app_archive_sha256}' /Users/admin/Downloads/Xcode.app.zip | shasum -a 256 -c -",
         "sudo ditto -x -k /Users/admin/Downloads/Xcode.app.zip /Applications",
         "rm /Users/admin/Downloads/Xcode.app.zip",
         "test -d /Applications/Xcode.app",
         "sudo mv /Applications/Xcode.app /Applications/Xcode_${var.xcode_version[0]}.app",
+        "codesign --verify --deep --strict --verbose=2 /Applications/Xcode_${var.xcode_version[0]}.app",
+        "spctl --assess --type execute --verbose=2 /Applications/Xcode_${var.xcode_version[0]}.app",
         "sudo xcode-select -s /Applications/Xcode_${var.xcode_version[0]}.app/Contents/Developer",
         "xcodebuild -runFirstLaunch",
         "xcodebuild -downloadPlatform iOS",
@@ -337,6 +359,10 @@ build {
 
   provisioner "shell" {
     inline = [
+      "sudo install -d -o root -g wheel -m 0700 /var/db/enclave",
+      "sudo touch /var/db/enclave/runtime-seal-required",
+      "sudo chown root:wheel /var/db/enclave/runtime-seal-required",
+      "sudo chmod 0600 /var/db/enclave/runtime-seal-required",
       "chmod 0755 /tmp/enclave-image-acceptance.sh",
       "/tmp/enclave-image-acceptance.sh",
       "rm /tmp/enclave-image-acceptance.sh",

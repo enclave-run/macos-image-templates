@@ -11,6 +11,11 @@ variable "vm_name" {
   type = string
 }
 
+variable "builder_password" {
+  type      = string
+  sensitive = true
+}
+
 variable "sbxd_darwin_path" {
   type        = string
   default     = ""
@@ -34,7 +39,7 @@ source "tart-cli" "tart" {
   cpu_count    = 4
   memory_gb    = 8
   disk_size_gb = 50
-  ssh_password = "admin"
+  ssh_password = var.builder_password
   ssh_username = "admin"
   ssh_timeout  = "120s"
 }

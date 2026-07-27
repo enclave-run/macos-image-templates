@@ -11,6 +11,16 @@ packer {
   }
 }
 
+variable "builder_password" {
+  type      = string
+  sensitive = true
+
+  validation {
+    condition     = can(regex("^[a-f0-9]{32}$", var.builder_password))
+    error_message = "Builder password must be a 32-character lowercase hex value."
+  }
+}
+
 source "tart-cli" "tart" {
   // will be update to 15.7.2
   from_ipsw    = "https://updates.cdn-apple.com/2025SummerFCS/fullrestores/093-10809/CFD6DD38-DAF0-40DA-854F-31AAD1294C6F/UniversalMac_15.6.1_24G90_Restore.ipsw"
@@ -18,7 +28,7 @@ source "tart-cli" "tart" {
   cpu_count    = 4
   memory_gb    = 8
   disk_size_gb = 50
-  ssh_password = "admin"
+  ssh_password = var.builder_password
   ssh_username = "admin"
   ssh_timeout  = "180s"
   boot_command = [
@@ -43,7 +53,7 @@ source "tart-cli" "tart" {
     # Data & Privacy
     "<wait10s><leftShiftOn><tab><leftShiftOff><spacebar>",
     # Create a Mac Account
-    "<wait10s>Managed via Tart<tab>admin<tab>admin<tab>admin<tab><tab><spacebar><tab><tab><spacebar>",
+    "<wait10s>Managed via Tart<tab>admin<tab>${var.builder_password}<tab>${var.builder_password}<tab><tab><spacebar><tab><tab><spacebar>",
     # Enable Voice Over
     "<wait120s><leftAltOn><f5><leftAltOff>",
     # Sign In with Your Apple ID
@@ -105,7 +115,7 @@ build {
   provisioner "shell" {
     inline = [
       // Enable passwordless sudo
-      "echo admin | sudo -S sh -c \"mkdir -p /etc/sudoers.d/; echo 'admin ALL=(ALL) NOPASSWD: ALL' | EDITOR=tee visudo /etc/sudoers.d/admin-nopasswd\"",
+      "echo '${var.builder_password}' | sudo -S sh -c \"mkdir -p /etc/sudoers.d/; echo 'admin ALL=(ALL) NOPASSWD: ALL' | EDITOR=tee visudo /etc/sudoers.d/admin-nopasswd\"",
       // Enable auto-login
       //
       // See https://github.com/xfreebird/kcpassword for details.
@@ -129,7 +139,7 @@ build {
       //
       // Note that this only works if the user is logged-in,
       // i.e. not on login screen.
-      "sysadminctl -screenLock off -password admin",
+      "sysadminctl -screenLock off -password '${var.builder_password}'",
     ]
   }
 
