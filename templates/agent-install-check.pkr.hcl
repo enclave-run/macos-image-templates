@@ -93,6 +93,7 @@ build {
       "sudo test -f /var/db/enclave/runtime-seal-required",
       "sudo launchctl disable system/com.openssh.sshd",
       "sleep 2",
+      "sudo launchctl print-disabled system | grep -Eq '\"com\\.openssh\\.sshd\"[[:space:]]*=>[[:space:]]*(true|disabled)'",
       "sudo test -f /var/db/enclave/runtime-seal-required",
       "sudo test -f /var/db/enclave/image-build-in-progress",
       "test \"$(/usr/sbin/sysctl -n kern.bootsessionuuid)\" = \"$(sudo cat /var/db/enclave/image-build-in-progress | tr -d '[:space:]')\"",

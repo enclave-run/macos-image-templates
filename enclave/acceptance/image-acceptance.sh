@@ -32,7 +32,7 @@ test "$(sudo defaults read /Library/Preferences/com.apple.loginwindow autoLoginU
 test "$(stat -f '%Su:%Sg:%Lp' /etc/kcpassword)" = root:wheel:600
 test -s /etc/kcpassword
 sudo launchctl print-disabled system |
-  grep -Eq '"com\.openssh\.sshd"[[:space:]]*=>[[:space:]]*true'
+  grep -Eq '"com\.openssh\.sshd"[[:space:]]*=>[[:space:]]*(true|disabled)'
 
 # Screen capture and input are driven by Tart's host-side, loopback-only VNC
 # endpoint. The runtime image must not depend on unsupported writes to the
