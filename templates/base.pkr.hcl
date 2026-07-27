@@ -28,12 +28,6 @@ variable "guest_bootstrap_path" {
   description = "Absolute path to the pinned root bootstrap helper. Empty is allowed for template validation only."
 }
 
-variable "macos_ui_path" {
-  type        = string
-  default     = ""
-  description = "Absolute path to the pinned macOS UI helper. Empty is allowed for template validation only."
-}
-
 source "tart-cli" "tart" {
   vm_name      = "${var.vm_name}"
   cpu_count    = 4
@@ -147,6 +141,9 @@ build {
   # Enable UI automation, see https://github.com/cirruslabs/macos-image-templates/issues/136
   provisioner "shell" {
     script = "scripts/automationmodetool.expect"
+    environment_vars = [
+      "BUILDER_PASSWORD=${var.builder_password}",
+    ]
   }
 
   // some other health checks
@@ -176,15 +173,6 @@ build {
     }
   }
 
-  dynamic "provisioner" {
-    for_each = var.macos_ui_path != "" ? [1] : []
-    labels   = ["file"]
-    content {
-      source      = var.macos_ui_path
-      destination = "/tmp/enclave-macos-ui"
-    }
-  }
-
   provisioner "file" {
     source      = "data/com.enclave.sbxd-darwin.plist"
     destination = "/tmp/com.enclave.sbxd-darwin.plist"
@@ -200,12 +188,6 @@ build {
     environment_vars = [
       "INSTALL_SBXD=${var.sbxd_darwin_path != "" ? "1" : "0"}",
       "INSTALL_BOOTSTRAP=${var.guest_bootstrap_path != "" ? "1" : "0"}",
-      "INSTALL_MACOS_UI=${var.macos_ui_path != "" ? "1" : "0"}",
     ]
-  }
-
-  # Update TCC.db and allow automation tools
-  provisioner "shell" {
-    script = "scripts/update-tcc-database.sh"
   }
 }

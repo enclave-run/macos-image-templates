@@ -22,15 +22,8 @@ if [[ "${INSTALL_BOOTSTRAP:-0}" == "1" ]]; then
     /Library/LaunchDaemons/com.enclave.guest-bootstrap.plist
 fi
 
-if [[ "${INSTALL_MACOS_UI:-0}" == "1" ]]; then
-  sudo install -o root -g wheel -m 0755 \
-    /tmp/enclave-macos-ui \
-    "$install_root/enclave-macos-ui"
-fi
-
 rm -f \
   /tmp/sbxd-darwin \
   /tmp/enclave-guest-bootstrap \
-  /tmp/enclave-macos-ui \
   /tmp/com.enclave.sbxd-darwin.plist \
   /tmp/com.enclave.guest-bootstrap.plist

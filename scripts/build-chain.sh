@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-if [[ $# -ne 6 ]]; then
-  echo "usage: $0 <macos-version> <xcode-version> <sbxd-darwin> <guest-bootstrap> <macos-ui> <created-vms-file>" >&2
+if [[ $# -ne 5 ]]; then
+  echo "usage: $0 <macos-version> <xcode-version> <sbxd-darwin> <guest-bootstrap> <created-vms-file>" >&2
   exit 64
 fi
 
@@ -11,8 +11,7 @@ macos_version=$1
 xcode_version=$2
 sbxd_darwin=$3
 guest_bootstrap=$4
-macos_ui=$5
-created_vms_file=$6
+created_vms_file=$5
 
 case "$macos_version" in
   tahoe|sequoia|sonoma) ;;
@@ -27,7 +26,7 @@ if [[ ! "$xcode_version" =~ ^[0-9]+([.][0-9]+){1,3}([._-][A-Za-z0-9]+)?$ ]]; the
   exit 64
 fi
 
-for artifact in "$sbxd_darwin" "$guest_bootstrap" "$macos_ui"; do
+for artifact in "$sbxd_darwin" "$guest_bootstrap"; do
   if [[ ! -f "$artifact" || "$artifact" != /* ]]; then
     echo "guest artifact must be an absolute file path: $artifact" >&2
     exit 66
@@ -60,7 +59,11 @@ if [[ "$xcode_archive" != *.zip && -n "$xcode_archive_sha256" ]]; then
   exit 64
 fi
 
-builder_password=$(openssl rand -hex 16)
+builder_password=${PKR_VAR_builder_password:-$(openssl rand -hex 16)}
+if [[ ! "$builder_password" =~ ^[a-f0-9]{32}$ ]]; then
+  echo "PKR_VAR_builder_password must be exactly 32 lowercase hex characters" >&2
+  exit 64
+fi
 export PKR_VAR_builder_password=$builder_password
 
 scripts/validate-enclave-boundary.sh
@@ -87,7 +90,6 @@ packer build \
   -var "vm_name=$base_name" \
   -var "sbxd_darwin_path=$sbxd_darwin" \
   -var "guest_bootstrap_path=$guest_bootstrap" \
-  -var "macos_ui_path=$macos_ui" \
   templates/base.pkr.hcl
 
 printf '%s\n' "$xcode_name" >>"$created_vms_file"

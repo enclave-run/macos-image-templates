@@ -9,7 +9,7 @@ fi
 
 artifact_dir=$1
 checksum_file="$artifact_dir/SHA256SUMS"
-artifacts=(sbxd-darwin enclave-guest-bootstrap enclave-macos-ui)
+artifacts=(sbxd-darwin enclave-guest-bootstrap)
 
 [[ -f "$checksum_file" ]] || {
   echo "missing SHA256SUMS" >&2

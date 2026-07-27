@@ -1,6 +1,43 @@
 #!/usr/bin/expect -f
 
+if {![info exists env(BUILDER_PASSWORD)] || ![regexp {^[a-f0-9]{32}$} $env(BUILDER_PASSWORD)]} {
+    puts stderr "BUILDER_PASSWORD is missing or invalid"
+    exit 64
+}
+
+set timeout 30
 spawn automationmodetool enable-automationmode-without-authentication
-expect "Enter the password for user 'admin':"
-send "admin\n"
-expect "Setting up machine to allow Automation Mode without requiring user authentication... succeeded."
+expect {
+    "Enter the password for user 'admin':" {}
+    timeout {
+        puts stderr "automationmodetool did not request authentication"
+        exit 1
+    }
+    eof {
+        puts stderr "automationmodetool exited before authentication"
+        exit 1
+    }
+}
+log_user 0
+send -- "$env(BUILDER_PASSWORD)\r"
+expect {
+    "Setting up machine to allow Automation Mode without requiring user authentication... succeeded." {
+        log_user 1
+        exit 0
+    }
+    "Authentication failed" {
+        log_user 1
+        puts stderr "automationmodetool rejected the builder credential"
+        exit 1
+    }
+    timeout {
+        log_user 1
+        puts stderr "automationmodetool timed out"
+        exit 1
+    }
+    eof {
+        log_user 1
+        puts stderr "automationmodetool exited without success"
+        exit 1
+    }
+}

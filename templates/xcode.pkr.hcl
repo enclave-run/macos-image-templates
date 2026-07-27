@@ -136,6 +136,16 @@ build {
       "rm /tmp/write-kcpassword.py",
       "test \"$(sudo defaults read /Library/Preferences/com.apple.loginwindow autoLoginUser)\" = admin",
       "test \"$(stat -f '%Su:%Sg:%Lp' /etc/kcpassword)\" = root:wheel:600",
+      // Remove the retired in-guest screen/input helper from any transitional
+      // parent image. Computer use terminates at the host's VNC capability.
+      "sudo rm -f /usr/local/libexec/enclave/enclave-macos-ui",
+    ]
+  }
+
+  provisioner "shell" {
+    script = "scripts/automationmodetool.expect"
+    environment_vars = [
+      "BUILDER_PASSWORD=${var.builder_password}",
     ]
   }
 

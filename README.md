@@ -45,7 +45,6 @@ packer build \
   -var vm_name=tahoe-base \
   -var sbxd_darwin_path=/absolute/path/to/sbxd-darwin \
   -var guest_bootstrap_path=/absolute/path/to/enclave-guest-bootstrap \
-  -var macos_ui_path=/absolute/path/to/enclave-macos-ui \
   templates/base.pkr.hcl
 
 packer init templates/xcode.pkr.hcl
