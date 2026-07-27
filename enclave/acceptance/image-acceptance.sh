@@ -1,6 +1,8 @@
 #!/bin/bash
 
 set -euo pipefail
+PS4='+ image-acceptance:${LINENO}: '
+set -x
 
 test "$(uname -m)" = "arm64"
 test "$(csrutil status)" = "System Integrity Protection status: enabled."

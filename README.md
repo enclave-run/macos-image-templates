@@ -63,6 +63,10 @@ source commit, tool versions, image manifest, acceptance results, and digest.
 Alias promotion happens in Enclave’s image catalogue after per-node
 activation—not inside this repository.
 
+The workhorse image installs the iOS Simulator runtime. Set
+`download_all_platforms=true` only for a separately catalogued image that also
+needs tvOS, watchOS, and visionOS; those runtimes add tens of gigabytes.
+
 ## Security invariants
 
 - SIP and AMFI remain enabled.

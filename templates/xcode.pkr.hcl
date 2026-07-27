@@ -82,6 +82,12 @@ variable "disk_free_mb" {
   default = 15000
 }
 
+variable "download_all_platforms" {
+  type        = bool
+  default     = false
+  description = "Install tvOS, watchOS, and visionOS runtimes in addition to iOS. The Enclave iOS workhorse image leaves this disabled."
+}
+
 variable "sbxd_darwin_path" {
   type        = string
   default     = ""
@@ -272,12 +278,16 @@ build {
     }
   }
 
-  provisioner "shell" {
-    inline = [
-      "source ~/.zprofile",
-      "sudo xcode-select -s /Applications/Xcode_${var.xcode_version[0]}.app/Contents/Developer",
-      "xcodebuild -downloadAllPlatforms",
-    ]
+  dynamic "provisioner" {
+    for_each = var.download_all_platforms ? [1] : []
+    labels   = ["shell"]
+    content {
+      inline = [
+        "source ~/.zprofile",
+        "sudo xcode-select -s /Applications/Xcode_${var.xcode_version[0]}.app/Contents/Developer",
+        "xcodebuild -downloadAllPlatforms",
+      ]
+    }
   }
 
   provisioner "shell" {
