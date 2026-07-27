@@ -93,20 +93,13 @@ source "tart-cli" "tart" {
     # This is so that we can navigate the System Settings app using the keyboard
     "<wait10s><leftAltOn><spacebar><leftAltOff>Terminal<wait10s><enter>",
     "<wait10s><wait10s>defaults write NSGlobalDomain AppleKeyboardUIMode -int 3<enter>",
-    # Now that the installation is done, open "System Settings"
-    # On Tahoe opening System Settings through Spotlight is not very reliable, sometimes opens System information
-    "<wait10s>open '/System/Applications/System Settings.app'<enter>",
-    "<wait120s>",
-    # Navigate to "Sharing"
-    "<wait10s><leftCtrlOn><f2><leftCtrlOff><right><right><right><down>Sharing<enter>",
-    # Navigate to "Screen Sharing" and enable it
-    "<wait10s><tab><tab><tab><tab><tab><spacebar>",
-    # Type in the password to allow enabling Screen Sharing
-    "<wait10s>${var.builder_password}<enter>",
-    # Navigate to "Remote Login" and enable it
-    "<wait10s><tab><tab><tab><tab><tab><tab><tab><tab><tab><tab><tab><tab><spacebar>",
-    # Quit System Settings
-    "<wait10s><leftAltOn>q<leftAltOff>",
+    # Bootstrap only the stock SSH LaunchDaemon needed by Packer. Tahoe's
+    # Sharing UI changes between point releases, while launchd's service label
+    # is stable. Screen Sharing is never enabled: Tart's VNC transport is
+    # sufficient for the image builder and remains host-side.
+    "<wait10s>echo '${var.builder_password}' | sudo -S /bin/launchctl enable system/com.openssh.sshd<enter>",
+    "<wait5s>echo '${var.builder_password}' | sudo -S /bin/launchctl bootstrap system /System/Library/LaunchDaemons/ssh.plist<enter>",
+    "<wait10s>",
   ]
 
   // A (hopefully) temporary workaround for Virtualization.Framework's
