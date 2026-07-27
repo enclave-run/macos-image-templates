@@ -196,7 +196,7 @@ build {
     inline = [
       "source ~/.zprofile",
       "brew install libimobiledevice ideviceinstaller ios-deploy carthage",
-      "brew install xcbeautify swiftformat swiftlint swiftgen licenseplist",
+      "brew install xcodegen xcbeautify swiftformat swiftlint swiftgen licenseplist",
       "brew install mint",
       "git clone --depth 1 https://github.com/tuist/homebrew-tuist.git \"$(brew --repository)/Library/Taps/tuist/homebrew-tuist\"",
       "rm -rf \"$(brew --repository)/Library/Taps/tuist/homebrew-tuist/Casks\"",
